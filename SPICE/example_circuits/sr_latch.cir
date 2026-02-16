@@ -1,0 +1,51 @@
+* SR Latch (NOR-based)
+* Classic cross-coupled NOR gates
+
+.title SR Latch Circuit
+
+* Power supply
+VDD vdd 0 DC 5V
+VSS vss 0 DC 0V
+
+* Input signals
+* S pulse: set at 10ns
+VS s 0 PWL(0 0 10n 0 11n 5 30n 5 31n 0 200n 0)
+* R pulse: reset at 70ns
+VR r 0 PWL(0 0 70n 0 71n 5 90n 5 91n 0 200n 0)
+
+* NOR gate 1 (for Q output)
+* Q = NOR(R, Q_bar)
+* Implements: Q_bar high OR R high -> Q low
+MN1_P1 q_int1 r vdd vdd PMOS W=4u L=0.5u
+MN1_P2 q q_bar vdd vdd PMOS W=4u L=0.5u
+MN1_N1 q_int1 r vss vss NMOS W=2u L=0.5u
+MN1_N2 q q_bar q_int1 vss NMOS W=2u L=0.5u
+
+* NOR gate 2 (for Q_bar output)
+* Q_bar = NOR(S, Q)
+* Implements: Q high OR S high -> Q_bar low
+MN2_P1 qb_int1 s vdd vdd PMOS W=4u L=0.5u
+MN2_P2 q_bar q vdd vdd PMOS W=4u L=0.5u
+MN2_N1 qb_int1 s vss vss NMOS W=2u L=0.5u
+MN2_N2 q_bar q qb_int1 vss NMOS W=2u L=0.5u
+
+* Initial condition capacitors (optional, helps convergence)
+.ic V(q)=0 V(q_bar)=5
+
+* MOSFET model
+.model NMOS NMOS (KP=100u VTO=0.7 LAMBDA=0.01)
+.model PMOS PMOS (KP=50u VTO=-0.7 LAMBDA=0.01)
+
+* Simulation commands
+.tran 0.1n 150n
+.control
+run
+plot v(s) v(r)+7 v(q)+14 v(q_bar)+21
+echo "SR Latch Operation:"
+echo "S=1, R=0: Set (Q=1, Q_bar=0)"
+echo "S=0, R=1: Reset (Q=0, Q_bar=1)"
+echo "S=0, R=0: Hold previous state"
+echo "S=1, R=1: Invalid (forbidden state)"
+.endc
+
+.end

@@ -1,0 +1,59 @@
+* D Flip-Flop (Master-Slave Configuration)
+* Uses two D latches in master-slave configuration
+
+.title D Flip-Flop Circuit
+
+* Power supply
+VDD vdd 0 DC 5V
+VSS vss 0 DC 0V
+
+* Input signals
+VD d 0 PULSE(0 5 10n 1n 1n 40n 100n)
+VCLK clk 0 PULSE(0 5 0 1n 1n 24n 50n)
+
+* Inverter for clock
+MCLK_INV1 clk_b clk vdd vdd PMOS W=2u L=0.5u
+MCLK_INV2 clk_b clk vss vss NMOS W=1u L=0.5u
+
+* MASTER LATCH (active when clk=1)
+* Transmission gate 1 (input to master)
+MTG1_P d_int d vdd clk_b PMOS W=2u L=0.5u
+MTG1_N d_int d vss clk NMOS W=1u L=0.5u
+
+* Master latch inverter 1
+MLAT1_P1 master_q d_int vdd vdd PMOS W=2u L=0.5u
+MLAT1_N1 master_q d_int vss vss NMOS W=1u L=0.5u
+
+* Transmission gate 2 (feedback in master)
+MTG2_P d_int master_q vdd clk PMOS W=2u L=0.5u
+MTG2_N d_int master_q vss clk_b NMOS W=1u L=0.5u
+
+* SLAVE LATCH (active when clk=0)
+* Transmission gate 3 (master to slave)
+MTG3_P slave_int master_q vdd clk PMOS W=2u L=0.5u
+MTG3_N slave_int master_q vss clk_b NMOS W=1u L=0.5u
+
+* Slave latch inverter
+MLAT2_P1 q slave_int vdd vdd PMOS W=2u L=0.5u
+MLAT2_N1 q slave_int vss vss NMOS W=1u L=0.5u
+
+* Transmission gate 4 (feedback in slave)
+MTG4_P slave_int q vdd clk_b PMOS W=2u L=0.5u
+MTG4_N slave_int q vss clk NMOS W=1u L=0.5u
+
+* Output inverter for Q_bar
+MOUT_P q_bar q vdd vdd PMOS W=2u L=0.5u
+MOUT_N q_bar q vss vss NMOS W=1u L=0.5u
+
+* MOSFET model (simple)
+.model NMOS NMOS (KP=100u VTO=0.7 LAMBDA=0.01)
+.model PMOS PMOS (KP=50u VTO=-0.7 LAMBDA=0.01)
+
+* Simulation commands
+.tran 0.1n 250n
+.control
+run
+plot v(d) v(clk)+8 v(q)+16 v(q_bar)+24
+.endc
+
+.end

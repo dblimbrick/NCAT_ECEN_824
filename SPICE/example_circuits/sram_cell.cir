@@ -1,0 +1,54 @@
+* 6T SRAM Cell
+* Standard 6-transistor SRAM memory cell
+
+.title 6T SRAM Cell Circuit
+
+* Power supply
+VDD vdd 0 DC 5V
+VSS vss 0 DC 0V
+
+* Wordline control
+* Write '1': WL high at 10ns-30ns, BL=5V, BL_bar=0V
+* Read: WL high at 60ns-80ns
+* Write '0': WL high at 100ns-120ns, BL=0V, BL_bar=5V
+VWL wl 0 PWL(0 0 10n 0 11n 5 30n 5 31n 0 60n 0 61n 5 80n 5 81n 0 100n 0 101n 5 120n 5 121n 0 150n 0)
+
+* Bit line drivers (for write operations)
+* Simulate write '1' at 10ns, then write '0' at 100ns
+VBL bl 0 PWL(0 5 10n 5 11n 5 30n 5 31n 5 60n 5 100n 5 101n 0 120n 0 121n 5 150n 5)
+VBLB bl_bar 0 PWL(0 5 10n 5 11n 0 30n 0 31n 5 60n 5 100n 5 101n 5 120n 5 121n 5 150n 5)
+
+* SRAM CELL (6 transistors)
+* Cross-coupled inverters (4 transistors)
+* Inverter 1: Q_bar = NOT(Q)
+M1 q_bar q vdd vdd PMOS W=2u L=0.5u
+M2 q_bar q vss vss NMOS W=1u L=0.5u
+
+* Inverter 2: Q = NOT(Q_bar)
+M3 q q_bar vdd vdd PMOS W=2u L=0.5u
+M4 q q_bar vss vss NMOS W=1u L=0.5u
+
+* Access transistors (2 transistors)
+* Connect to bitlines when wordline is high
+M5 bl wl q vss NMOS W=1.5u L=0.5u
+M6 bl_bar wl q_bar vss NMOS W=1.5u L=0.5u
+
+* Initial condition (optional)
+.ic V(q)=0 V(q_bar)=5
+
+* MOSFET model
+.model NMOS NMOS (KP=100u VTO=0.7 LAMBDA=0.01)
+.model PMOS PMOS (KP=50u VTO=-0.7 LAMBDA=0.01)
+
+* Simulation commands
+.tran 0.1n 150n
+.control
+run
+plot v(wl) v(bl)+7 v(bl_bar)+14 v(q)+21 v(q_bar)+28
+echo "SRAM Cell Operation:"
+echo "10-30ns: Write '1' (WL high, BL=5V, BL_bar=0V)"
+echo "60-80ns: Read operation (WL high, BL and BL_bar precharged)"
+echo "100-120ns: Write '0' (WL high, BL=0V, BL_bar=5V)"
+.endc
+
+.end
