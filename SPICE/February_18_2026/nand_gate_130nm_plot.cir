@@ -1,0 +1,118 @@
+* ============================================================
+* CMOS NAND Gate - 2-Input
+* 130nm Bulk CMOS Technology
+* Transient Simulation showing all input combinations
+* ============================================================
+
+* --- Include Process Model ---
+* Update the path below to point to your local copy of 130nm_bulk.pm
+.include "130nm_bulk.pm"
+
+* ============================================================
+* NAND Gate Subcircuit
+* Ports: A B VDD VSS Y
+*   A, B  = inputs
+*   VDD   = supply
+*   VSS   = ground
+*   Y     = output
+*
+* NAND truth table:
+*   A=0, B=0 -> Y=1
+*   A=1, B=0 -> Y=1
+*   A=0, B=1 -> Y=1
+*   A=1, B=1 -> Y=0
+* ============================================================
+.subckt NAND2 A B VDD VSS Y
+
+* Pull-up network: two PMOS in parallel (either low input pulls Y high)
+MP1  Y  A  VDD  VDD  PMOS  W=1u  L=130n
+MP2  Y  B  VDD  VDD  PMOS  W=1u  L=130n
+
+* Pull-down network: two NMOS in series (both must be high to pull Y low)
+MN1  Y   A  mid  VSS  NMOS  W=2u  L=130n
+MN2  mid B  VSS  VSS  NMOS  W=2u  L=130n
+
+* Note: NMOS W=2u (sized 2x PMOS) to compensate for lower mobility
+
+.ends NAND2
+
+* ============================================================
+* Top-Level Testbench
+* ============================================================
+* Supply
+VDD  VDD  0  DC 1.2V
+
+* Input A: toggles every 10ns (period = 20ns)
+VA  A  0  PULSE(0 1.2 0 100p 100p 10n 20n)
+
+* Input B: toggles every 20ns (period = 40ns)
+* This gives us all 4 input combinations over 40ns
+VB  B  0  PULSE(0 1.2 5n 100p 100p 20n 40n)
+
+* Instantiate NAND gate
+X1  A  B  VDD  0  Y  NAND2
+
+* Load capacitance (represents fanout)
+CL  Y  0  10f
+
+* ============================================================
+* Simulation Commands
+* ============================================================
+* Transient sim: run for 80ns (two full cycles of B = all combos x2)
+.tran 10p 80n
+
+* Save key signals
+.save V(A) V(B) V(Y) V(VDD)
+
+* ============================================================
+* Simulation Control, Plot & Export
+* ============================================================
+.control
+  run
+
+  * ---- Measurements ----
+  meas tran tpHL TRIG V(A) VAL=0.6 RISE=2 TARG V(Y) VAL=0.6 FALL=2
+  meas tran tpLH TRIG V(A) VAL=0.6 FALL=2 TARG V(Y) VAL=0.6 RISE=2
+  echo
+  echo === Propagation Delays ===
+  print tpHL tpLH
+  echo
+
+  * ---- Plot Configuration ----
+*  set hcopydevtype = png
+  set hcopyfontsize = 16
+  set hcopypscolor = 1
+  set hcopywidth  = 1200
+  set hcopyheight = 900
+
+  * Colour scheme (white background, readable traces)
+  set color0  = white
+  set color1  = black
+  set color2  = red
+  set color3  = blue
+  set color4  = green4
+
+  * ---- Stacked 3-panel waveform plot ----
+  * Each signal gets its own subplot via "separate" keyword so
+  * they are easy to read without overlapping.
+  *
+  * Panel layout (top -> bottom):
+  *   Panel 1: Input A  (red)
+  *   Panel 2: Input B  (blue)
+  *   Panel 3: Output Y (green)
+
+  setplot tran1
+
+  * ---- Interactive plot (opens GUI window when run interactively) ----
+  plot V(A)+3 V(B)+1.5 V(Y)                               \
+    title "NAND Gate: A (offset+3V)  B (offset+1.5V)  Y"  \
+    xlabel "Time (s)"                                      \
+    ylabel "Voltage (V)"
+
+  * ---- Export raw data ----
+*  write nand_gate_output.raw V(A) V(B) V(Y)
+*  echo Raw data saved to nand_gate_output.raw
+
+.endc
+
+.end
