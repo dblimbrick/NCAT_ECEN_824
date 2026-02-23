@@ -1,0 +1,27 @@
+* CMOS inverter with SET injection
+
+Vdd vdd 0 1.8
+Vin in 0 1.8
+
+.model nmos NMOS level=1 VTO=0.5 KP=200u LAMBDA=0.02
+.model pmos PMOS level=1 VTO=-0.5 KP=100u LAMBDA=0.02
+
+M1 out in 0 0 nmos W=1u L=0.18u
+M2 out in vdd vdd pmos W=2u L=0.18u
+
+Cl out 0 20f
+
+* SET current injection
+.include "set_pwl.sp"
+
+.tran 1p 2n
+
+* Measure pulse width at half maximum
+.meas tran pw TRIG v(out) VAL=0.5 TD=0 RISE=1 TARG v(out) VAL=0.5 TD=0 FALL=1
+
+.control
+run
+plot v(out)
+.endc
+
+.end
